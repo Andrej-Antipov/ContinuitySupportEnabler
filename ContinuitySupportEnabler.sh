@@ -1,6 +1,12 @@
  #!/bin/sh
 
-clear && printf '\e[3J' 
+clear
+
+osascript -e "tell application \"Terminal\" to set the font size of window 1 to 12"
+osascript -e "tell application \"Terminal\" to set background color of window 1 to {1028, 12850, 65535}"
+osascript -e "tell application \"Terminal\" to set normal text color of window 1 to {65535, 65535, 65535}"
+
+clear && printf '\e[3J'
 
 printf '\n\n*****   Патч plist сценария разрешения Continuity Support для    ******\n'
 printf '*****  мак моделей без нативной поддержки Continuity             ******\n'

@@ -8,6 +8,8 @@ osascript -e "tell application \"Terminal\" to set normal text color of window 1
 
 clear && printf '\e[3J'
 
+loc=`locale | grep LANG | sed -e 's/.*LANG="\(.*\)_.*/\1/'`
+
 printf '\n\n*****   Патч plist сценария разрешения Continuity Support для    ******\n'
 printf '*****  мак моделей без нативной поддержки Continuity             ******\n'
 
@@ -87,17 +89,21 @@ esac
 
 if [[ $legal = 0 ]] 
 	then 
-		sleep 3
-		clear && printf '\e[3J'
+		
 		printf '\n    !!!   board-id этого макинтоша = '
 		printf "$board"
 		printf '   !!!\n\n'
 		echo "Для этой модели мака патч невозможен или не требуется" 
 		echo "Завершение программы. Выход"
-		echo
-		echo
-		sleep 1
-		exit 1
+
+            if [ ! $loc = "ru" ]; then
+        read -p "Press any key to close this window " -n 1 -r
+                else
+        read -p "Для выхода нажмите любую клавишу" -n 1 -r
+            fi
+        clear
+        osascript -e 'tell application "Terminal" to close first window' & exit
+		exit 
 fi
  
 printf '\e[3J'
@@ -110,14 +116,19 @@ printf ' \n'
 
 if [ $continuity == 1 ]
 	then
-        sleep 3
-		clear && printf '\e[3J'
         echo "    !!!         Для этой системы патч  не требуется"
 		printf '    !!!         Сценарий Continuity уже разрешен         !!!\n'
 		echo "    !!!         Завершение работы программы.Выход"
-		printf '\n\n\n\n'
-		exit 1
+            if [ ! $loc = "ru" ]; then
+        read -p "Press any key to close this window " -n 1 -r
+                else
+        read -p "Для выхода нажмите любую клавишу" -n 1 -r
+            fi
+        clear
+        osascript -e 'tell application "Terminal" to close first window' & exit
+		exit 
 fi
+
 sleep 1
 		
 printf '\n    !!! Сценарий Continuity запрещен, необходим патч !!!\n\n'
@@ -134,11 +145,14 @@ if [[ ! $REPLY =~ ^[yY]$ ]]
 
 then
     
-    printf '\n\nМудрый выбор. Завершение  программы. Выход ... !\n'
-    sleep 2
-   
-    exit 1
-
+            if [ ! $loc = "ru" ]; then
+        printf '\n\nМудрый выбор. Завершение  программы. Выход ... !\n'
+                else
+       printf '\n\nМудрый выбор. Завершение  программы. Выход ... !\n'
+            fi
+        clear
+        osascript -e 'tell application "Terminal" to close first window' & exit
+		exit 
 fi
 
 sleep 0.3

@@ -10,12 +10,21 @@ clear && printf '\e[3J'
 
 loc=`locale | grep LANG | sed -e 's/.*LANG="\(.*\)_.*/\1/'`
 
+            if [ ! $loc = "ru" ]; then
 printf '\n\n*****   Патч plist сценария разрешения Continuity Support для    ******\n'
-printf '*****  мак моделей без нативной поддержки Continuity             ******\n'
+printf '*****     мак моделей без нативной поддержки Continuity             ******\n'
+                else
+printf '\n\n*****   Патч plist сценария разрешения Continuity Support для    ******\n'
+printf '*****     мак моделей без нативной поддержки Continuity             ******\n'
+            fi
 
 sleep 0.5
 
+            if [ ! $loc = "ru" ]; then 
 printf '\n    !!!   Ваша система '
+                else
+printf '\n    !!!   Ваша система '
+            fi
 printf "`sw_vers -productName`"
 printf ': '; printf "`sw_vers -productVersion`" 
 printf '('
@@ -30,8 +39,11 @@ scontinuity=`defaults read /System/Library/Frameworks/IOBluetooth.framework/Vers
 
 continuity=`echo ${scontinuity//[^0-1]/}`
 
-
+            if [ ! $loc = "ru" ]; then 
 printf '\n    !!!   board-id этого макинтоша = '
+                    else
+printf '\n    !!!   board-id этого макинтоша = '
+            fi
 printf "$board"
 printf '   !!!\n'
 
@@ -89,12 +101,17 @@ esac
 
 if [[ $legal = 0 ]] 
 	then 
-		
+            if [ ! $loc = "ru" ]; then		
 		printf '\n    !!!   board-id этого макинтоша = '
 		printf "$board"
 		printf '   !!!\n\n'
 		echo "Для этой модели мака патч невозможен или не требуется" 
-		echo "Завершение программы. Выход"
+		          else
+        printf '\n    !!!   board-id этого макинтоша = '
+		printf "$board"
+		printf '   !!!\n\n'
+		echo "Для этой модели мака патч невозможен или не требуется"
+            fi 
 
             if [ ! $loc = "ru" ]; then
         read -p "Press any key to close this window " -n 1 -r
@@ -107,18 +124,29 @@ if [[ $legal = 0 ]]
 fi
  
 printf '\e[3J'
-
+            if [ ! $loc = "ru" ]; then
 printf '\nПолучаем информацию о системе ...\n\n'
 printf 'Состояние разрешения сценария Bluetooth для '
+                else
+printf '\nПолучаем информацию о системе ...\n\n'
+printf 'Состояние разрешения сценария Bluetooth для '
+            fi
 printf "$board"
 printf ' \n'
 
 
 if [ $continuity == 1 ]
 	then
+            if [ ! $loc = "ru" ]; then            
         echo "    !!!         Для этой системы патч  не требуется"
 		printf '    !!!         Сценарий Continuity уже разрешен         !!!\n'
 		echo "    !!!         Завершение работы программы.Выход"
+                else
+        echo "    !!!         Для этой системы патч  не требуется"
+		printf '    !!!         Сценарий Continuity уже разрешен         !!!\n'
+		echo "    !!!         Завершение работы программы.Выход"
+            fi
+
             if [ ! $loc = "ru" ]; then
         read -p "Press any key to close this window " -n 1 -r
                 else
@@ -130,16 +158,25 @@ if [ $continuity == 1 ]
 fi
 
 sleep 1
-		
+            if [ ! $loc = "ru" ]; then 		
 printf '\n    !!! Сценарий Continuity запрещен, необходим патч !!!\n\n'
 
 
 echo "Для продолжения нажмите англ. литеру Y"
 echo "Для завершения любую другую клавишу"
 printf '\n'
-               
 
 read -p "Желаете продолжить установку? (y/N) " -n 1 -r
+            else
+printf '\n    !!! Сценарий Continuity запрещен, необходим патч !!!\n\n'
+
+
+echo "Для продолжения нажмите англ. литеру Y"
+echo "Для завершения любую другую клавишу"
+printf '\n'
+              
+read -p "Желаете продолжить установку? (y/N) " -n 1 -r
+            fi
 
 if [[ ! $REPLY =~ ^[yY]$ ]]
 
@@ -156,11 +193,13 @@ then
 fi
 
 sleep 0.3
-
+            if [ ! $loc = "ru" ]; then
 printf '\n\n\n*****  Вы точно знаете что делаете!  *****\n\n'
 printf '\nДля продолжения введите ваш пароль\n\n'
-
-
+                else
+printf '\n\n\n*****  Вы точно знаете что делаете!  *****\n\n'
+printf '\nДля продолжения введите ваш пароль\n\n'
+            fi
 
 sudo printf '\n\n'
 
@@ -173,7 +212,11 @@ let _left=40-$_done
 _fill=$(printf "%${_done}s")
 _empty=$(printf "%${_left}s")
 
+            if [ ! $loc = "ru" ]; then
 printf "\rВыполняется: ${_fill// /.}${_empty// / } ${_progress}%%"
+                else
+printf "\rВыполняется: ${_fill// /.}${_empty// / } ${_progress}%%"
+            fi
 
 }
 
@@ -187,14 +230,20 @@ sudo cp SystemParameters.plist /System/Library/Frameworks/IOBluetooth.framework/
 
 rm -f SystemParameters.plist
 
+            if [ ! $loc = "ru" ]; then
 echo "    !!!    Патч сценария Bluetooth для Continuity сделан"
-
 printf '\n\nОбновляем кэш системных сценариев. Это занимает несколько минут\n'
 sleep 1
 
-
+printf '\nВыполняется: '
+                else
+echo "    !!!    Патч сценария Bluetooth для Continuity сделан"
+printf '\n\nОбновляем кэш системных сценариев. Это занимает несколько минут\n'
+sleep 1
 
 printf '\nВыполняется: '
+            fi
+
 while :;do printf '.';sleep 3;done &
 trap "kill $!" EXIT 
 sudo update_dyld_shared_cache -debug -force -root / 2>/dev/null
@@ -202,18 +251,19 @@ kill $!
 wait $! 2>/dev/null
 trap " " EXIT
 
+            if [ ! $loc = "ru" ]; then
 printf '\n\nКэш системных сценариев обновлен\n\n'
-
-
-
 printf '\nВсе операции завершены\n'
 sleep 1
-
 printf '\nНеобходимый таймаут перед перезагрузкой операционной системы\n'
-
 printf '\nНажмте CTRL + C для прерывания если не хотите перезагружать сейчас\n\n'
-sleep 5
-
+                else
+printf '\n\nКэш системных сценариев обновлен\n\n'
+printf '\nВсе операции завершены\n'
+sleep 1
+printf '\nНеобходимый таймаут перед перезагрузкой операционной системы\n'
+printf '\nНажмте CTRL + C для прерывания если не хотите перезагружать сейчас\n\n'
+            fi
 
 _start=1
 
@@ -230,9 +280,11 @@ done
 sleep 1
 
 
-
+            if [ ! $loc = "ru" ]; then
 printf '\n\nПрограмма завершена. Инициирована перезагрузка. На HDD может занять пару минут.\n\n'
-
+                else
+printf '\n\nПрограмма завершена. Инициирована перезагрузка. На HDD может занять пару минут.\n\n'
+            fi
 
 sudo reboot now
 

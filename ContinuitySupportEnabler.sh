@@ -1,14 +1,52 @@
  #!/bin/sh
 
-clear
+MyTTY=`tty | tr -d " dev/\n"`
+if [[ ${MyTTY} = "ttys001" ]]; then
+# Получаем uid и pid первой консоли
+MY_uid=`echo $UID`; PID_ttys001=`echo $$`
+# получаем pid нулевой консоли
+temp=`ps -ef | grep ttys000 | grep $MY_uid`; PID_ttys000=`echo $temp | awk  '{print $2}'`
+# вычисляем время жизни нашей консоли в секундах
+Time001=`ps -p $PID_ttys001 -oetime= | tr '-' ':' | awk -F: '{ total=0; m=1; } { for (i=0; i < NF; i++) {total += $(NF-i)*m; m *= i >= 2 ? 24 : 60 }} {print total}'`
+# Вычисляем время жизни нулевой консоли в секундах
+Time000=`ps -p $PID_ttys000 -oetime= | tr '-' ':' | awk -F: '{ total=0; m=1; } { for (i=0; i < NF; i++) {total += $(NF-i)*m; m *= i >= 2 ? 24 : 60 }} {print total}'`
+	if [[ ${Time001} -le ${Time000} ]]; then 
+let "TimeDiff=Time000-Time001"
+# Здесь задаётся постоянная в секундах по которой можно считать что нулевая консоль запущена сразу перед первой и потому её надо закрыть
+		if [[ ${TimeDiff} -le 4 ]]; then osascript -e 'tell application "Terminal" to close second  window'; fi
+	fi	
+fi
+term=`ps`;  MyTTYcount=`echo $term | grep -Eo $MyTTY | wc -l | tr - " \t\n"`
+
+clear && printf '\e[3J' && printf '\033[0;0H'
 
 osascript -e "tell application \"Terminal\" to set the font size of window 1 to 12"
-osascript -e "tell application \"Terminal\" to set background color of window 1 to {1028, 12850, 65535}"
+osascript -e "tell application \"Terminal\" to set background color of window 1 to {1028, 12850, 10240}"
 osascript -e "tell application \"Terminal\" to set normal text color of window 1 to {65535, 65535, 65535}"
 
-clear && printf '\e[3J'
 
 loc=`locale | grep LANG | sed -e 's/.*LANG="\(.*\)_.*/\1/'`
+
+lines=33
+printf '\e[8;'${lines}';80t' && printf '\e[3J' && printf "\033[0;0H"
+
+
+csrset=$(csrutil status | grep "status:" | grep -ow "disabled")
+if [[ ! $csrset = "disabled" ]]; then
+        printf '           \e[1;31m!!!\e[0m   \e[1;36m Защита целостности системы включена\e[0m              \e[1;31m!!!\e[0m\n\n'
+		printf '           \e[1;31m!!!\e[0m    \e[33mПродолжение установки невозможно\e[0m                 \e[1;31m!!!\e[0m\n'
+		printf '           \e[1;31m!!!\e[0m    \e[33mПатч Continuity не сработает\e[0m                     \e[1;31m!!!\e[0m\n'
+		printf '           \e[1;31m!!!\e[0m    \e[33mЗагрузитесь в Recovery\e[0m                           \e[1;31m!!!\e[0m\n'
+		printf '           \e[1;31m!!!\e[0m    \e[33mЗапустите утилиту терминала и выполните\e[0m          \e[1;31m!!!\e[0m\n'
+		printf '           \e[1;31m!!!\e[0m    \e[33mкоманду csrutil disable\e[0m                          \e[1;31m!!!\e[0m\n'
+		printf '           \e[1;31m!!!\e[0m    \e[33mпосле перезагрузки запустите программу еще раз\e[0m   \e[1;31m!!!\e[0m\n'
+		printf '\n'
+        printf '                  \e[1;36mДля выхода нажмите любую клавишу.  \e[0m'
+		read  -n 1 -s
+        clear
+        osascript -e 'tell application "Terminal" to close first window' & exit
+fi 
+
 
             if [ ! $loc = "ru" ]; then
 printf '\n\n*****   Патч plist сценария разрешения Continuity Support для    ******\n'
@@ -33,21 +71,31 @@ printf ') '
 printf '  !!!\n'
 
 
+# Возвращает в переменной TTYcount 0 если наш терминал один
+CHECK_TTY_COUNT(){
+term=`ps`
+AllTTYcount=`echo $term | grep -Eo ttys[0-9][0-9][0-9] | wc -l | tr - " \t\n"`
+let "TTYcount=AllTTYcount-MyTTYcount"
+}
+
+################## Выход из программы с проверкой - выгружать терминал из трея или нет #####################################################
+EXIT_PROGRAM(){
+################################## очистка на выходе #############################################################
+cat  ~/.bash_history | sed -n '/ContinuitySupportEnabler/!p' >> ~/new_hist.txt; rm ~/.bash_history; mv ~/new_hist.txt ~/.bash_history
+#####################################################################################################################
+CHECK_TTY_COUNT	
+if [[ ${TTYcount} = 0  ]]; then   osascript -e 'quit app "terminal.app"' & exit
+	else
+     osascript -e 'tell application "Terminal" to close first window' & exit
+fi
+}
+
+
+CHECK_WHITELIST(){
+
 board=`ioreg -lp IOService | grep board-id | awk -F"<" '{print $2}' | cut -c 2- | rev | cut -c 3- | rev`
 
-scontinuity=`defaults read /System/Library/Frameworks/IOBluetooth.framework/Versions/A/Resources/SystemParameters.plist | grep -A 1 "$board" | grep ContinuitySupport`
-
-continuity=`echo ${scontinuity//[^0-1]/}`
-
-            if [ ! $loc = "ru" ]; then 
-printf '\n    !!!   board-id этого макинтоша = '
-                    else
-printf '\n    !!!   board-id этого макинтоша = '
-            fi
-printf "$board"
-printf '   !!!\n'
-
-
+legal=0
 case "$board" in
 
 "Mac-4BC72D62AD45599E" ) legal=1;;
@@ -98,53 +146,77 @@ case "$board" in
 
 esac
 
+if [[ $legal = 0 ]]; then continuity=1
+        else
+scontinuity=`defaults read /System/Library/Frameworks/IOBluetooth.framework/Versions/A/Resources/SystemParameters.plist | grep -A 1 "$board" | grep ContinuitySupport`
+continuity=`echo ${scontinuity//[^0-1]/}`
+fi
+if [[ $continuity = 1 ]]; then bt_check="сделано"; else bt_check="не сделано"; fi
+
+}
+
+SET_WHITELIST(){
+
+    
+         if [[ $continuity = 0 ]]; then 
+               cp /System/Library/Frameworks/IOBluetooth.framework/Versions/A/Resources/SystemParameters.plist .
+               plutil -replace  $board.ContinuitySupport  -bool YES SystemParameters.plist
+               sudo cp SystemParameters.plist /System/Library/Frameworks/IOBluetooth.framework/Versions/A/Resources/SystemParameters.plist
+                rm -f SystemParameters.plist
+        
+
+
+        sudo nvram bluetoothHostControllerSwitchBehavior=always
+
+        fi
+
+sleep 0.1
+
+}
+
+CHECK_WHITELIST
 
 if [[ $legal = 0 ]] 
 	then 
             if [ ! $loc = "ru" ]; then		
-		printf '\n    !!!   board-id этого макинтоша = '
+		printf '\n       board-id этого макинтоша = '
 		printf "$board"
-		printf '   !!!\n\n'
-		echo "Для этой модели мака патч невозможен или не требуется" 
+		printf '   \n\n'
+		echo "Для этой модели мака патч невозможен или не требуется !!!"
+        echo 
 		          else
-        printf '\n    !!!   board-id этого макинтоша = '
+        printf '\n       board-id этого макинтоша = '
 		printf "$board"
-		printf '   !!!\n\n'
-		echo "Для этой модели мака патч невозможен или не требуется"
+		printf '   \n\n'
+		echo "Для этой модели мака патч невозможен или не требуется !!!"
+        echo
             fi 
 
             if [ ! $loc = "ru" ]; then
-        read -p "Press any key to close this window " -n 1 -r
+        read -p "Press any key to close this window ... " -n 1 -r
                 else
-        read -p "Для выхода нажмите любую клавишу" -n 1 -r
+        read -p "Для выхода нажмите любую клавишу ..." -n 1 -r
             fi
         clear
-        osascript -e 'tell application "Terminal" to close first window' & exit
-		exit 
+        EXIT_PROGRAM
 fi
  
-printf '\e[3J'
-            if [ ! $loc = "ru" ]; then
-printf '\nПолучаем информацию о системе ...\n\n'
-printf 'Состояние разрешения сценария Bluetooth для '
-                else
-printf '\nПолучаем информацию о системе ...\n\n'
-printf 'Состояние разрешения сценария Bluetooth для '
-            fi
-printf "$board"
-printf ' \n'
 
 
 if [[ $continuity = 1 ]]
 	then
-            if [ ! $loc = "ru" ]; then            
-        echo "    !!!         Для этой системы патч  не требуется"
-		printf '    !!!         Сценарий Continuity уже разрешен         !!!\n'
-		echo "    !!!         Завершение работы программы.Выход"
+            if [ ! $loc = "ru" ]; then 
+        echo           
+        echo "          Для этой системы патч  не требуется"
+		printf '          Сценарий Continuity уже разрешен          !!!\n\n'
+		echo "          Завершение работы программы.Выход"
+        echo
                 else
-        echo "    !!!         Для этой системы патч  не требуется"
-		printf '    !!!         Сценарий Continuity уже разрешен         !!!\n'
-		echo "    !!!         Завершение работы программы.Выход"
+        echo
+        echo "          Для этой системы патч  не требуется"
+		printf '          Сценарий Continuity уже разрешен          !!!\n\n'
+		echo "          Завершение работы программы.Выход"
+        echo
             fi
 
             if [ ! $loc = "ru" ]; then
@@ -153,8 +225,7 @@ if [[ $continuity = 1 ]]
         read -p "Для выхода нажмите любую клавишу" -n 1 -r
             fi
         clear
-        osascript -e 'tell application "Terminal" to close first window' & exit
-		exit 
+        EXIT_PROGRAM
 fi
 
 sleep 1
@@ -162,20 +233,20 @@ sleep 1
 printf '\n    !!! Сценарий Continuity запрещен, необходим патч !!!\n\n'
 
 
-echo "Для продолжения нажмите англ. литеру Y"
-echo "Для завершения любую другую клавишу"
+echo "    Для продолжения нажмите англ. литеру Y"
+echo "    Для завершения любую другую клавишу"
 printf '\n'
 
-read -p "Желаете продолжить установку? (y/N) " -n 1 -r
+read -p " Желаете продолжить установку? (y/N) " -n 1 -r
             else
 printf '\n    !!! Сценарий Continuity запрещен, необходим патч !!!\n\n'
 
 
-echo "Для продолжения нажмите англ. литеру Y"
-echo "Для завершения любую другую клавишу"
+echo "    Для продолжения нажмите англ. литеру Y"
+echo "    Для завершения любую другую клавишу"
 printf '\n'
               
-read -p "Желаете продолжить установку? (y/N) " -n 1 -r
+read -p " Желаете продолжить установку? (y/N) " -n 1 -r
             fi
 
 if [[ ! $REPLY =~ ^[yY]$ ]]
@@ -222,26 +293,20 @@ printf "\rВыполняется: ${_fill// /.}${_empty// / } ${_progress}%%"
 
 cd $(dirname $0)
 
-cp /System/Library/Frameworks/IOBluetooth.framework/Versions/A/Resources/SystemParameters.plist .
-
-plutil -replace  $board.ContinuitySupport  -bool YES SystemParameters.plist
-
-sudo cp SystemParameters.plist /System/Library/Frameworks/IOBluetooth.framework/Versions/A/Resources/SystemParameters.plist
-
-rm -f SystemParameters.plist
+SET_WHITELIST
 
             if [ ! $loc = "ru" ]; then
 echo "    !!!    Патч сценария Bluetooth для Continuity сделан"
-printf '\n\nОбновляем кэш системных сценариев. Это занимает несколько минут\n'
+printf '\n\n Обновляем кэш системных сценариев. Это занимает несколько минут\n'
 sleep 1
 
-printf '\nВыполняется: '
+printf '\n Выполняется: '
                 else
 echo "    !!!    Патч сценария Bluetooth для Continuity сделан"
-printf '\n\nОбновляем кэш системных сценариев. Это занимает несколько минут\n'
+printf '\n\n Обновляем кэш системных сценариев. Это занимает несколько минут\n'
 sleep 1
 
-printf '\nВыполняется: '
+printf '\n Выполняется: '
             fi
 
 while :;do printf '.';sleep 3;done &

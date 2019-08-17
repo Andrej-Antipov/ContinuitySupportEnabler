@@ -135,7 +135,7 @@ printf "$board"
 printf ' \n'
 
 
-if [ $continuity == 1 ]
+if [[ $continuity = 1 ]]
 	then
             if [ ! $loc = "ru" ]; then            
         echo "    !!!         Для этой системы патч  не требуется"
